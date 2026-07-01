@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Inventaris Khoiru Ummah</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f4c75 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Pola grid halus di background */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .orb-1 { width: 400px; height: 400px; background: #3b82f6; top: -100px; right: -100px; }
+  .orb-2 { width: 300px; height: 300px; background: #0ea5e9; bottom: -80px; left: -80px; }
+
+  .card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 44px 40px 36px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  }
+
+  .logo-wrap {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 20px rgba(14,165,233,0.35);
+  }
+  .logo-wrap h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+  }
+  .logo-wrap p {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .form-group { margin-bottom: 18px; }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 7px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 11px 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+  }
+  .form-group input::placeholder { color: #475569; }
+  .form-group input:focus {
+    border-color: #0ea5e9;
+    background: rgba(14,165,233,0.08);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+    color: white;
+    box-shadow: 0 4px 15px rgba(14,165,233,0.3);
+    margin-bottom: 10px;
+  }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(14,165,233,0.45);
+  }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+    color: #475569;
+    font-size: 11px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #94a3b8;
+    font-size: 13px;
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.25);
+    color: #e2e8f0;
+  }
+
+  .alert {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+  .alert.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-icon">📋</div>
+    <h1>E-Inventaris</h1>
+    <p>Yayasan Khoiru Ummah Sawojajar</p>
+  </div>
+
+  <div id="alertBox" class="alert alert-error"></div>
+
+  <form id="loginForm" onsubmit="handleLogin(event)">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="username" placeholder="Masukkan username..." required autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Masukkan password..." required autocomplete="current-password">
+    </div>
+    <button type="submit" id="loginBtn" class="btn btn-primary">Masuk ke Dashboard</button>
+  </form>
+
+  <div class="divider">atau</div>
+
+  <button class="btn btn-ghost" onclick="window.location.href='view_only.html'">
+    👁️ Lihat Data Inventaris (Tanpa Login)
+  </button>
+</div>
+
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyrBEKLPrTOCHjt4WHTWIvERAn4s-Oy9jBNR8QLITJz-S0ubRnqng7U3ArQokxbdYGQQQ/exec';
+
+  function showAlert(msg) {
+    const el = document.getElementById('alertBox');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    document.getElementById('alertBox').classList.remove('show');
+
+    btn.textContent = 'Memverifikasi...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'CEK_LOGIN', username: user, password: pass })
+      });
+      const result = await res.json();
+
+      if (result.status === 'SUKSES') {
+        localStorage.setItem('inv_logged_in', 'true');
+        localStorage.setItem('inv_username', result.username);
+        localStorage.setItem('inv_nama', result.nama);
+        localStorage.setItem('inv_role', result.role);
+        localStorage.setItem('inv_unit', result.unit);
+        window.location.href = 'dashboard.html';
+      } else {
+        showAlert(result.pesan || 'Login gagal.');
+        btn.textContent = 'Masuk ke Dashboard';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      showAlert('Tidak bisa terhubung ke server. Cek koneksi internet.');
+      btn.textContent = 'Masuk ke Dashboard';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
