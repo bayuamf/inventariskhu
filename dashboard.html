@@ -664,6 +664,21 @@ tbody tr:hover { background: #f8fafc; }
   </div>
 </div></div>
 
+<!-- ── MODAL: TAMBAH BARANG (Dinamis per KIB) ── -->
+<div class="overlay" id="ovTambahBarang"><div class="modal modal-wide">
+  <div class="modal-head" id="tambahBarangHead">
+    <h3 id="tambahBarangTitle">Tambah Barang</h3>
+    <button class="modal-close-btn" onclick="tutupOverlay('ovTambahBarang')">✕</button>
+  </div>
+  <div class="modal-body-form">
+    <div id="tambahBarangFields"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="tutupOverlay('ovTambahBarang')">Batal</button>
+    <button class="btn btn-amber" id="btnSimpanBarang" onclick="simpanBarangBaru()">💾 Simpan Barang</button>
+  </div>
+</div></div>
+
 <!-- ── MODAL: JADWAL MUSNAH ── -->
 <div class="overlay" id="ovMusnah"><div class="modal">
   <div class="modal-head" style="background:#dc2626"><h3>Jadwalkan Pemusnahan</h3><button class="modal-close-btn" onclick="tutupOverlay('ovMusnah')">✕</button></div>
@@ -1113,8 +1128,231 @@ function pinjamDariDetail() {
   siapkanPinjam(idx);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// TAMBAH BARANG (form dinamis per KIB)
+// ═══════════════════════════════════════════════════════════════
+
+const KIB_FIELDS = {
+  'KIB A': [
+    { key: 'Kode_Barang',      label: 'Kode Barang',       type: 'text',   required: true,  placeholder: 'Contoh: A-002' },
+    { key: 'Nama_Barang',      label: 'Nama Barang',        type: 'text',   required: true,  placeholder: 'Nama aset tanah...' },
+    { key: 'Unit_Pemilik',     label: 'Unit Pemilik',       type: 'unit',   required: true  },
+    { key: 'Register',         label: 'No. Register',       type: 'number', required: false, placeholder: '1' },
+    { key: 'Luas_M2',          label: 'Luas (m²)',          type: 'number', required: false, placeholder: '0' },
+    { key: 'Tahun_Pengadaan',  label: 'Tahun Pengadaan',    type: 'number', required: false, placeholder: '2024' },
+    { key: 'Letak_Alamat',     label: 'Letak / Alamat',     type: 'text',   required: false, placeholder: 'Jl. ...' },
+    { key: 'Hak',              label: 'Hak',                type: 'select', required: false, options: ['Hak Milik', 'HGB', 'Hak Pakai', 'Hak Guna Usaha', 'Lainnya'] },
+    { key: 'Tgl_Sertifikat',   label: 'Tgl Sertifikat',     type: 'date',   required: false },
+    { key: 'No_Sertifikat',    label: 'No. Sertifikat',     type: 'text',   required: false, placeholder: '-' },
+    { key: 'Penggunaan',       label: 'Penggunaan',         type: 'text',   required: false, placeholder: 'Pendidikan, Ibadah...' },
+    { key: 'Harga',            label: 'Harga (Rp)',         type: 'number', required: false, placeholder: '0' },
+    { key: 'Keterangan',       label: 'Keterangan',         type: 'textarea', required: false, placeholder: '-' },
+  ],
+  'KIB B': [
+    { key: 'Kode_Barang',      label: 'Kode Barang',        type: 'text',   required: true,  placeholder: 'Contoh: B-002' },
+    { key: 'Nama_Barang',      label: 'Nama Barang',        type: 'text',   required: true,  placeholder: 'Proyektor, Laptop...' },
+    { key: 'Unit_Pemilik',     label: 'Unit Pemilik',       type: 'unit',   required: true  },
+    { key: 'No_Register',      label: 'No. Register',       type: 'text',   required: false, placeholder: 'REG001' },
+    { key: 'Merek_Tipe',       label: 'Merek / Tipe',       type: 'text',   required: false, placeholder: 'Epson EB-X06' },
+    { key: 'Ukuran_CC',        label: 'Ukuran / CC',        type: 'text',   required: false, placeholder: '-' },
+    { key: 'Bahan',            label: 'Bahan',              type: 'text',   required: false, placeholder: 'Plastik, Besi...' },
+    { key: 'Tahun_Pengadaan',  label: 'Tahun Pengadaan',    type: 'number', required: false, placeholder: '2024' },
+    { key: 'Nomor_Pabrik',     label: 'No. Pabrik',         type: 'text',   required: false, placeholder: '-' },
+    { key: 'Nomor_Rangka',     label: 'No. Rangka',         type: 'text',   required: false, placeholder: '-' },
+    { key: 'Nomor_Mesin',      label: 'No. Mesin',          type: 'text',   required: false, placeholder: '-' },
+    { key: 'No_Polisi',        label: 'No. Polisi',         type: 'text',   required: false, placeholder: '-' },
+    { key: 'No_BPKB',          label: 'No. BPKB',           type: 'text',   required: false, placeholder: '-' },
+    { key: 'Asal_Usul',        label: 'Asal Usul',          type: 'select', required: false, options: ['APBS', 'Donasi', 'Hibah', 'Pembelian', 'Lainnya'] },
+    { key: 'Harga',            label: 'Harga (Rp)',         type: 'number', required: false, placeholder: '0' },
+    { key: 'Jumlah_Total',     label: 'Jumlah Total',       type: 'number', required: true,  placeholder: '1' },
+    { key: 'Jumlah_Baik',      label: 'Jumlah Kondisi Baik', type: 'number', required: true, placeholder: '1' },
+    { key: 'Jumlah_Rusak',     label: 'Jumlah Kondisi Rusak', type: 'number', required: false, placeholder: '0' },
+  ],
+  'KIB C': [
+    { key: 'Kode_Barang',          label: 'Kode Barang',          type: 'text',   required: true,  placeholder: 'Contoh: C-002' },
+    { key: 'Nama_Barang',          label: 'Nama Barang',          type: 'text',   required: true,  placeholder: 'Gedung SD Lantai 2...' },
+    { key: 'Unit_Pemilik',         label: 'Unit Pemilik',         type: 'unit',   required: true  },
+    { key: 'Register',             label: 'No. Register',         type: 'number', required: false, placeholder: '1' },
+    { key: 'Kondisi_Bangunan',     label: 'Kondisi Bangunan',     type: 'select', required: false, options: ['Baik', 'Rusak Ringan', 'Rusak Berat'] },
+    { key: 'Konstruksi_Bertingkat',label: 'Konstruksi Bertingkat',type: 'select', required: false, options: ['Ya', 'Tidak'] },
+    { key: 'Konstruksi_Beton',     label: 'Konstruksi Beton',     type: 'select', required: false, options: ['Ya', 'Tidak'] },
+    { key: 'Luas_Lantai_M2',       label: 'Luas Lantai (m²)',     type: 'number', required: false, placeholder: '0' },
+    { key: 'Letak_Lokasi',         label: 'Letak / Lokasi',       type: 'text',   required: false, placeholder: 'Jl. ...' },
+    { key: 'Dokumen_Tanggal',      label: 'Tgl Dokumen',          type: 'date',   required: false },
+    { key: 'Dokumen_Nomor',        label: 'No. Dokumen',          type: 'text',   required: false, placeholder: '-' },
+    { key: 'Luas_M2',              label: 'Luas Tanah (m²)',      type: 'number', required: false, placeholder: '0' },
+    { key: 'Status_Tanah',         label: 'Status Tanah',         type: 'select', required: false, options: ['Hak Milik', 'HGB', 'Hak Pakai', 'Sewa', 'Lainnya'] },
+    { key: 'Asal_Usul',            label: 'Asal Usul',            type: 'select', required: false, options: ['APBS', 'Donasi', 'Hibah', 'Pembelian', 'Lainnya'] },
+    { key: 'Harga',                label: 'Harga (Rp)',           type: 'number', required: false, placeholder: '0' },
+    { key: 'Keterangan',           label: 'Keterangan',           type: 'textarea', required: false, placeholder: '-' },
+  ],
+  'KIB D': [
+    { key: 'Kode_Barang',        label: 'Kode Barang',        type: 'text',   required: true,  placeholder: 'Contoh: D-002' },
+    { key: 'Nama_Barang',        label: 'Nama Barang',        type: 'text',   required: true,  placeholder: 'Jalan, Drainase, Jaringan...' },
+    { key: 'Unit_Pemilik',       label: 'Unit Pemilik',       type: 'unit',   required: true  },
+    { key: 'Register',           label: 'No. Register',       type: 'number', required: false, placeholder: '1' },
+    { key: 'Konstruksi',         label: 'Jenis Konstruksi',   type: 'text',   required: false, placeholder: 'Aspal, Paving, Beton...' },
+    { key: 'Panjang_KM',         label: 'Panjang (km)',       type: 'number', required: false, placeholder: '0' },
+    { key: 'Lebar_M',            label: 'Lebar (m)',          type: 'number', required: false, placeholder: '0' },
+    { key: 'Luas_M2',            label: 'Luas (m²)',          type: 'number', required: false, placeholder: '0' },
+    { key: 'Letak_Lokasi',       label: 'Letak / Lokasi',     type: 'text',   required: false, placeholder: 'Depan gedung...' },
+    { key: 'Dokumentasi_Tanggal',label: 'Tgl Dokumentasi',    type: 'date',   required: false },
+    { key: 'Dokumentasi_Nomor',  label: 'No. Dokumentasi',    type: 'text',   required: false, placeholder: '-' },
+    { key: 'Status_Tanah',       label: 'Status Tanah',       type: 'select', required: false, options: ['Hak Milik', 'HGB', 'Hak Pakai', 'Sewa', 'Lainnya'] },
+    { key: 'Asal_Usul',          label: 'Asal Usul',          type: 'select', required: false, options: ['APBS', 'Donasi', 'Hibah', 'Pembelian', 'Lainnya'] },
+    { key: 'Harga',              label: 'Harga (Rp)',         type: 'number', required: false, placeholder: '0' },
+    { key: 'Kondisi',            label: 'Kondisi',            type: 'select', required: false, options: ['Baik', 'Rusak Ringan', 'Rusak Berat'] },
+    { key: 'Keterangan',         label: 'Keterangan',         type: 'textarea', required: false, placeholder: '-' },
+  ],
+  'KIB E': [
+    { key: 'Kode_Barang',      label: 'Kode Barang',        type: 'text',   required: true,  placeholder: 'Contoh: E-002' },
+    { key: 'Nama_Barang',      label: 'Nama Barang',        type: 'text',   required: true,  placeholder: 'Buku, Karya Seni...' },
+    { key: 'Unit_Pemilik',     label: 'Unit Pemilik',       type: 'unit',   required: true  },
+    { key: 'Register',         label: 'No. Register',       type: 'number', required: false, placeholder: '1' },
+    { key: 'Judul_Buku',       label: 'Judul / Deskripsi',  type: 'text',   required: false, placeholder: '-' },
+    { key: 'Spesifikasi',      label: 'Spesifikasi',        type: 'text',   required: false, placeholder: 'Hardcover, A4...' },
+    { key: 'Asal_Daerah',      label: 'Asal Daerah',        type: 'text',   required: false, placeholder: '-' },
+    { key: 'Pencipta',         label: 'Pencipta / Penulis', type: 'text',   required: false, placeholder: '-' },
+    { key: 'Bahan',            label: 'Bahan',              type: 'text',   required: false, placeholder: 'Kertas, Kain...' },
+    { key: 'Jenis',            label: 'Jenis',              type: 'text',   required: false, placeholder: 'Buku, Lukisan...' },
+    { key: 'Ukuran',           label: 'Ukuran',             type: 'text',   required: false, placeholder: 'A5, 30x40cm...' },
+    { key: 'Jumlah',           label: 'Jumlah',             type: 'number', required: true,  placeholder: '1' },
+    { key: 'Tahun_Cetak',      label: 'Tahun Cetak / Buat', type: 'number', required: false, placeholder: '2024' },
+    { key: 'Asal_Usul',        label: 'Asal Usul',          type: 'select', required: false, options: ['APBS', 'Donasi', 'Hibah', 'Pembelian', 'Lainnya'] },
+    { key: 'Harga',            label: 'Harga (Rp)',         type: 'number', required: false, placeholder: '0' },
+    { key: 'Keterangan',       label: 'Keterangan',         type: 'textarea', required: false, placeholder: '-' },
+  ],
+  'KIB F': [
+    { key: 'Kode_Barang',           label: 'Kode Barang',           type: 'text',   required: true,  placeholder: 'Contoh: F-002' },
+    { key: 'Nama_Barang',           label: 'Nama Proyek',           type: 'text',   required: true,  placeholder: 'Pembangunan Aula...' },
+    { key: 'Unit_Pemilik',          label: 'Unit Pemilik',          type: 'unit',   required: true  },
+    { key: 'Jenis_Bangunan',        label: 'Jenis Bangunan',        type: 'select', required: false, options: ['P', 'L', 'Lainnya'] },
+    { key: 'Konstruksi_Bertingkat', label: 'Konstruksi Bertingkat', type: 'select', required: false, options: ['Ya', 'Tidak'] },
+    { key: 'Konstruksi_Beton',      label: 'Konstruksi Beton',      type: 'select', required: false, options: ['Ya', 'Tidak'] },
+    { key: 'Luas_M2',               label: 'Luas (m²)',             type: 'number', required: false, placeholder: '0' },
+    { key: 'Letak_Lokasi',          label: 'Letak / Lokasi',        type: 'text',   required: false, placeholder: 'Komplek...' },
+    { key: 'Dokumen_Tanggal',       label: 'Tgl Dokumen',           type: 'date',   required: false },
+    { key: 'Dokumen_Nomor',         label: 'No. Dokumen',           type: 'text',   required: false, placeholder: '-' },
+    { key: 'Tgl_Mulai',             label: 'Tgl Mulai Pengerjaan',  type: 'date',   required: false },
+    { key: 'Status_Tanah',          label: 'Status Tanah',          type: 'select', required: false, options: ['Hak Milik', 'HGB', 'Hak Pakai', 'Sewa', 'Lainnya'] },
+    { key: 'Asal_Usul_Pembiayaan',  label: 'Asal Usul Pembiayaan',  type: 'select', required: false, options: ['APBS', 'Donasi', 'Hibah', 'Pinjaman', 'Lainnya'] },
+    { key: 'Nilai_Kontrak',         label: 'Nilai Kontrak (Rp)',    type: 'number', required: false, placeholder: '0' },
+    { key: 'Keterangan',            label: 'Keterangan',            type: 'textarea', required: false, placeholder: 'Status pengerjaan, kendala...' },
+  ],
+  'BHP': [
+    { key: 'Kode_Barang',  label: 'Kode Barang',  type: 'text',   required: true,  placeholder: 'Contoh: BHP-002' },
+    { key: 'Nama_Barang',  label: 'Nama Barang',  type: 'text',   required: true,  placeholder: 'Spidol, Kertas...' },
+    { key: 'Unit_Pemilik', label: 'Unit Pemilik', type: 'unit',   required: true  },
+    { key: 'Stok_Awal',    label: 'Stok Awal',    type: 'number', required: true,  placeholder: '0' },
+    { key: 'Barang_Masuk', label: 'Barang Masuk', type: 'number', required: false, placeholder: '0' },
+    { key: 'Barang_Keluar',label: 'Barang Keluar',type: 'number', required: false, placeholder: '0' },
+    { key: 'Stok_Akhir',   label: 'Stok Akhir',   type: 'number', required: false, placeholder: '0' },
+  ],
+};
+
 function bukaModalTambahBarang() {
-  alert('Fitur form tambah barang baru akan otomatis menyesuaikan kolom berdasarkan KIB yang aktif (' + currentKib + '). Saat ini kamu bisa input data langsung ke Google Sheets untuk data awal, atau hubungi developer untuk form input dinamis per KIB.');
+  const fields = KIB_FIELDS[currentKib];
+  if (!fields) return alert('KIB tidak dikenali: ' + currentKib);
+
+  document.getElementById('tambahBarangTitle').textContent = 'Tambah Barang - ' + currentKib;
+  document.getElementById('tambahBarangHead').style.background = '#b45309';
+
+  const container = document.getElementById('tambahBarangFields');
+  container.innerHTML = '';
+
+  // Render field 2 kolom seperti modal lainnya
+  let html = '<div class="form-row">';
+  let colCount = 0;
+
+  fields.forEach((f, i) => {
+    if (f.type === 'textarea') {
+      // Tutup form-row yang sedang terbuka dulu kalau ada
+      if (colCount % 2 !== 0) html += '<div class="form-group"></div>';
+      html += '</div><div class="form-group">';
+      html += '<label>' + f.label + (f.required ? ' <span style="color:var(--red)">*</span>' : '') + '</label>';
+      html += '<textarea id="tb_' + f.key + '" placeholder="' + (f.placeholder || '') + '"></textarea>';
+      html += '</div><div class="form-row">';
+      colCount = 0;
+      return;
+    }
+
+    html += '<div class="form-group"><label>' + f.label + (f.required ? ' <span style="color:var(--red)">*</span>' : '') + '</label>';
+
+    if (f.type === 'unit') {
+      html += '<select id="tb_' + f.key + '">';
+      allUnits.filter(u => u.Status === 'Aktif').forEach(u => {
+        const sel = u.Nama_Unit === USER.unit ? ' selected' : '';
+        html += '<option value="' + u.Nama_Unit + '"' + sel + '>' + u.Nama_Unit + '</option>';
+      });
+      html += '</select>';
+    } else if (f.type === 'select') {
+      html += '<select id="tb_' + f.key + '">';
+      (f.options || []).forEach(o => html += '<option value="' + o + '">' + o + '</option>');
+      html += '</select>';
+    } else {
+      html += '<input type="' + f.type + '" id="tb_' + f.key + '" placeholder="' + (f.placeholder || '') + '">';
+    }
+
+    html += '</div>';
+    colCount++;
+
+    // Setiap 2 kolom, tutup dan buka form-row baru
+    if (colCount === 2 && i < fields.length - 1) {
+      html += '</div><div class="form-row">';
+      colCount = 0;
+    }
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+  document.getElementById('ovTambahBarang').classList.add('open');
+}
+
+async function simpanBarangBaru() {
+  const fields = KIB_FIELDS[currentKib];
+  if (!fields) return;
+
+  // Validasi field required
+  for (const f of fields) {
+    const el = document.getElementById('tb_' + f.key);
+    if (f.required && el && el.value.trim() === '') {
+      alert(f.label + ' wajib diisi.');
+      el.focus();
+      return;
+    }
+  }
+
+  // Kumpulkan nilai semua field
+  const baris = {};
+  fields.forEach(f => {
+    const el = document.getElementById('tb_' + f.key);
+    if (el) {
+      baris[f.key] = (f.type === 'number') ? (Number(el.value) || 0) : el.value.trim();
+    }
+  });
+
+  // Nomor urut otomatis
+  baris['No'] = (kibData.length + 1);
+
+  const btn = document.getElementById('btnSimpanBarang');
+  btn.textContent = 'Menyimpan...';
+  btn.disabled = true;
+
+  try {
+    const r = await api({ action: 'TAMBAH_BARANG', kib: currentKib, baris });
+    if (r.status === 'SUKSES') {
+      alert('Barang berhasil ditambahkan ke ' + currentKib + '.');
+      tutupOverlay('ovTambahBarang');
+      fetchKib(currentKib); // Reload tabel
+    } else {
+      alert(r.pesan);
+    }
+  } catch {
+    alert('Gagal terhubung ke server.');
+  } finally {
+    btn.textContent = '💾 Simpan Barang';
+    btn.disabled = false;
+  }
 }
 
 async function hapusBarang(kode) {
