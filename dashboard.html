@@ -664,6 +664,49 @@ tbody tr:hover { background: #f8fafc; }
   </div>
 </div></div>
 
+<!-- ── SEC: KELOLA REFERENSI (Main Admin only) ── -->
+<div class="section" id="sec-referensi">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+
+    <div class="card" style="margin-bottom:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Sumber Dana</div>
+          <div class="card-sub">Opsi yang muncul di penomoran registrasi barang.</div>
+        </div>
+        <button class="btn btn-blue btn-sm" onclick="document.getElementById('ovTambahAsalUsul').classList.add('open')">+ Tambah</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Kode</th><th>Nama</th><th>Status</th><th style="text-align:center">Hapus</th></tr></thead>
+          <tbody id="tbAsalUsul">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Golongan Barang</div>
+          <div class="card-sub">Kode golongan untuk penomoran registrasi barang.</div>
+        </div>
+        <button class="btn btn-blue btn-sm" onclick="document.getElementById('ovTambahGolongan').classList.add('open')">+ Tambah</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Kode</th><th>Nama</th><th>Deskripsi</th><th style="text-align:center">Hapus</th></tr></thead>
+          <tbody id="tbGolongan">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ── MODAL: TAMBAH BARANG (Dinamis per KIB) ── -->
 <div class="overlay" id="ovTambahBarang"><div class="modal modal-wide">
   <div class="modal-head" id="tambahBarangHead">
@@ -744,6 +787,7 @@ const MENU_ITEMS = [
   ...(isAdmin ? [{ section: 'Admin', items: [
     { id: 'sec-unit',   icon: '🏫', label: 'Kelola Unit'       },
     { id: 'sec-user',   icon: '👥', label: 'Kelola Sub-Admin'  },
+	{ id: 'sec-referensi', icon: '🗂️', label: 'Kelola Referensi' },
     { id: 'sec-musnah', icon: '🗑️', label: 'Pemusnahan Aset'   },
   ]}] : []),
 ];
@@ -785,6 +829,7 @@ function loadSection(id, label) {
   if (id === 'sec-pinjam')  loadPeminjaman();
   if (id === 'sec-kembali') loadPengembalian();
   if (id === 'sec-musnah')  loadPermusnahan();
+  if (id === 'sec-referensi') loadReferensi();
 }
 
 function loadKib(kib, label, sectionId) {
@@ -893,6 +938,7 @@ async function loadNotif() {
 }
 
 function toggleNotifPanel() { loadSection('sec-home', 'Dashboard'); }
+loadMasterData();
 
 // ═══════════════════════════════════════════════════════════════
 // KELOLA UNIT
@@ -1250,53 +1296,105 @@ const KIB_FIELDS = {
   ],
 };
 
-function bukaModalTambahBarang() {
+// ═══════════════════════════════════════════════════════════════
+// TAMBAH BARANG - Versi baru dengan penomoran otomatis
+// ═══════════════════════════════════════════════════════════════
+
+// Field yang diurus generator header, tidak dirender dari KIB_FIELDS
+const SKIP_AUTO_FIELDS = ['No', 'Kode_Barang', 'Unit_Pemilik', 'Tahun_Pengadaan'];
+
+async function bukaModalTambahBarang() {
   const fields = KIB_FIELDS[currentKib];
   if (!fields) return alert('KIB tidak dikenali: ' + currentKib);
 
-  document.getElementById('tambahBarangTitle').textContent = 'Tambah Barang - ' + currentKib;
+  document.getElementById('tambahBarangTitle').textContent = 'Tambah Barang – ' + currentKib;
   document.getElementById('tambahBarangHead').style.background = '#b45309';
 
   const container = document.getElementById('tambahBarangFields');
-  container.innerHTML = '';
 
-  // Render field 2 kolom seperti modal lainnya
-  let html = '<div class="form-row">';
+  // Bangun opsi dropdown sumber dana
+  const auOptions = asalUsulList.length > 0
+    ? asalUsulList.map(d => `<option value="${d.Kode}">${d.Kode} – ${d.Nama}</option>`).join('')
+    : '<option value="">Belum ada data – tambah di Kelola Referensi</option>';
+
+  // Bangun opsi dropdown golongan
+  const golOptions = golonganList.length > 0
+    ? golonganList.map(d => `<option value="${d.Kode}">${d.Kode} – ${d.Nama}</option>`).join('')
+    : '<option value="">Belum ada data – tambah di Kelola Referensi</option>';
+
+  // Bangun opsi dropdown unit
+  const unitOptions = allUnits
+    .filter(u => u.Status === 'Aktif')
+    .map(u => `<option value="${u.Nama_Unit}" ${u.Nama_Unit === USER.unit ? 'selected' : ''}>${u.Nama_Unit}</option>`)
+    .join('');
+
+  const tahunSekarang = new Date().getFullYear();
+
+  // Header generator kode (bagian kuning atas)
+  let html = `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:18px">
+      <div style="font-size:11px;font-weight:800;color:#92400e;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">
+        🏷️ Nomor Registrasi Otomatis
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sumber Dana <span style="color:var(--red)">*</span></label>
+          <select id="tb_gen_sumber" onchange="generateKodeBarang()">${auOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Unit Pemilik <span style="color:var(--red)">*</span></label>
+          <select id="tb_gen_unit" onchange="generateKodeBarang()">${unitOptions}</select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Golongan Barang <span style="color:var(--red)">*</span></label>
+          <select id="tb_gen_golongan" onchange="generateKodeBarang()">${golOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Tahun Pengadaan <span style="color:var(--red)">*</span></label>
+          <input type="number" id="tb_gen_tahun" value="${tahunSekarang}" min="2000" max="2100"
+            oninput="generateKodeBarang()" onchange="generateKodeBarang()">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Nomor Registrasi (otomatis)</label>
+        <input type="text" id="tb_Kode_Barang" readonly
+          style="background:#f0fdf4;font-weight:800;font-family:monospace;font-size:13px;color:#166534;border-color:#bbf7d0"
+          placeholder="Pilih semua opsi di atas untuk generate nomor...">
+      </div>
+    </div>
+    <div class="form-row">`;
+
+  // Render field KIB, skip yang sudah diurus generator
   let colCount = 0;
-
   fields.forEach((f, i) => {
+    if (SKIP_AUTO_FIELDS.includes(f.key)) return;
+
     if (f.type === 'textarea') {
-      // Tutup form-row yang sedang terbuka dulu kalau ada
       if (colCount % 2 !== 0) html += '<div class="form-group"></div>';
-      html += '</div><div class="form-group">';
-      html += '<label>' + f.label + (f.required ? ' <span style="color:var(--red)">*</span>' : '') + '</label>';
-      html += '<textarea id="tb_' + f.key + '" placeholder="' + (f.placeholder || '') + '"></textarea>';
-      html += '</div><div class="form-row">';
+      html += `</div><div class="form-group">
+        <label>${f.label}${f.required ? ' <span style="color:var(--red)">*</span>' : ''}</label>
+        <textarea id="tb_${f.key}" placeholder="${f.placeholder || ''}"></textarea>
+      </div><div class="form-row">`;
       colCount = 0;
       return;
     }
 
-    html += '<div class="form-group"><label>' + f.label + (f.required ? ' <span style="color:var(--red)">*</span>' : '') + '</label>';
+    html += `<div class="form-group">
+      <label>${f.label}${f.required ? ' <span style="color:var(--red)">*</span>' : ''}</label>`;
 
-    if (f.type === 'unit') {
-      html += '<select id="tb_' + f.key + '">';
-      allUnits.filter(u => u.Status === 'Aktif').forEach(u => {
-        const sel = u.Nama_Unit === USER.unit ? ' selected' : '';
-        html += '<option value="' + u.Nama_Unit + '"' + sel + '>' + u.Nama_Unit + '</option>';
-      });
-      html += '</select>';
-    } else if (f.type === 'select') {
-      html += '<select id="tb_' + f.key + '">';
-      (f.options || []).forEach(o => html += '<option value="' + o + '">' + o + '</option>');
+    if (f.type === 'select') {
+      html += `<select id="tb_${f.key}">`;
+      (f.options || []).forEach(o => html += `<option value="${o}">${o}</option>`);
       html += '</select>';
     } else {
-      html += '<input type="' + f.type + '" id="tb_' + f.key + '" placeholder="' + (f.placeholder || '') + '">';
+      html += `<input type="${f.type}" id="tb_${f.key}" placeholder="${f.placeholder || ''}">`;
     }
 
     html += '</div>';
     colCount++;
 
-    // Setiap 2 kolom, tutup dan buka form-row baru
     if (colCount === 2 && i < fields.length - 1) {
       html += '</div><div class="form-row">';
       colCount = 0;
@@ -1305,15 +1403,58 @@ function bukaModalTambahBarang() {
 
   html += '</div>';
   container.innerHTML = html;
+
   document.getElementById('ovTambahBarang').classList.add('open');
+
+  // Auto-generate kode setelah form terbuka
+  generateKodeBarang();
+}
+
+async function generateKodeBarang() {
+  const sumber = document.getElementById('tb_gen_sumber')?.value;
+  const unit = document.getElementById('tb_gen_unit')?.value;
+  const golongan = document.getElementById('tb_gen_golongan')?.value;
+  const tahun = document.getElementById('tb_gen_tahun')?.value;
+  const kodeEl = document.getElementById('tb_Kode_Barang');
+
+  if (!kodeEl) return;
+  if (!sumber || !unit || !golongan || !tahun) {
+    kodeEl.value = '';
+    kodeEl.placeholder = 'Pilih semua opsi di atas untuk generate nomor...';
+    return;
+  }
+
+  kodeEl.value = 'Membuat nomor...';
+  kodeEl.style.color = '#92400e';
+
+  try {
+    const r = await api({ action: 'GENERATE_KODE', kib: currentKib, sumber, unit, golongan, tahun });
+    if (r.status === 'SUKSES') {
+      kodeEl.value = r.kode;
+      kodeEl.style.color = '#166534';
+    } else {
+      kodeEl.value = '';
+      alert(r.pesan);
+    }
+  } catch {
+    kodeEl.value = '';
+    alert('Gagal terhubung ke server saat generate nomor.');
+  }
 }
 
 async function simpanBarangBaru() {
   const fields = KIB_FIELDS[currentKib];
   if (!fields) return;
 
-  // Validasi field required
+  const kode = document.getElementById('tb_Kode_Barang')?.value;
+  if (!kode || kode === 'Membuat nomor...') {
+    alert('Nomor registrasi belum terbuat. Pastikan sumber dana, unit, golongan, dan tahun sudah dipilih.');
+    return;
+  }
+
+  // Validasi field required dari KIB_FIELDS
   for (const f of fields) {
+    if (SKIP_AUTO_FIELDS.includes(f.key)) continue;
     const el = document.getElementById('tb_' + f.key);
     if (f.required && el && el.value.trim() === '') {
       alert(f.label + ' wajib diisi.');
@@ -1322,17 +1463,18 @@ async function simpanBarangBaru() {
     }
   }
 
-  // Kumpulkan nilai semua field
+  // Kumpulkan semua nilai
   const baris = {};
-  fields.forEach(f => {
-    const el = document.getElementById('tb_' + f.key);
-    if (el) {
-      baris[f.key] = (f.type === 'number') ? (Number(el.value) || 0) : el.value.trim();
-    }
-  });
+  baris['No'] = kibData.length + 1;
+  baris['Kode_Barang'] = kode;
+  baris['Unit_Pemilik'] = document.getElementById('tb_gen_unit').value;
+  baris['Tahun_Pengadaan'] = document.getElementById('tb_gen_tahun').value;
 
-  // Nomor urut otomatis
-  baris['No'] = (kibData.length + 1);
+  fields.forEach(f => {
+    if (SKIP_AUTO_FIELDS.includes(f.key)) return;
+    const el = document.getElementById('tb_' + f.key);
+    if (el) baris[f.key] = f.type === 'number' ? (Number(el.value) || 0) : el.value.trim();
+  });
 
   const btn = document.getElementById('btnSimpanBarang');
   btn.textContent = 'Menyimpan...';
@@ -1341,9 +1483,9 @@ async function simpanBarangBaru() {
   try {
     const r = await api({ action: 'TAMBAH_BARANG', kib: currentKib, baris });
     if (r.status === 'SUKSES') {
-      alert('Barang berhasil ditambahkan ke ' + currentKib + '.');
+      alert('Barang berhasil ditambahkan.\nNomor Registrasi: ' + kode);
       tutupOverlay('ovTambahBarang');
-      fetchKib(currentKib); // Reload tabel
+      fetchKib(currentKib);
     } else {
       alert(r.pesan);
     }
@@ -1353,6 +1495,103 @@ async function simpanBarangBaru() {
     btn.textContent = '💾 Simpan Barang';
     btn.disabled = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KELOLA REFERENSI (Sumber Dana & Golongan)
+// ═══════════════════════════════════════════════════════════════
+
+let asalUsulList = [];
+let golonganList = [];
+
+async function loadMasterData() {
+  try {
+    const [r1, r2] = await Promise.all([
+      api({ action: 'GET_ASAL_USUL' }),
+      api({ action: 'GET_GOLONGAN' })
+    ]);
+    asalUsulList = (r1.data || []).filter(d => d.Status === 'Aktif');
+    golonganList = (r2.data || []).filter(d => d.Status === 'Aktif');
+  } catch {
+    console.warn('Gagal memuat data referensi master.');
+  }
+}
+
+async function loadReferensi() {
+  await loadMasterData();
+
+  const tbAU = document.getElementById('tbAsalUsul');
+  const tbGol = document.getElementById('tbGolongan');
+
+  const allAU = await api({ action: 'GET_ASAL_USUL' });
+  tbAU.innerHTML = (allAU.data || []).map(d =>
+    `<tr>
+      <td><code style="font-weight:800;color:var(--blue)">${d.Kode}</code></td>
+      <td>${d.Nama}</td>
+      <td><span class="badge ${d.Status === 'Aktif' ? 'badge-green' : 'badge-gray'}">${d.Status}</span></td>
+      <td style="text-align:center">
+        <button class="btn btn-red btn-sm" onclick="hapusAsalUsul('${d.Kode}')">Hapus</button>
+      </td>
+    </tr>`
+  ).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Belum ada data.</td></tr>';
+
+  const allGol = await api({ action: 'GET_GOLONGAN' });
+  tbGol.innerHTML = (allGol.data || []).map(d =>
+    `<tr>
+      <td><code style="font-weight:800;color:var(--blue)">${d.Kode}</code></td>
+      <td>${d.Nama}</td>
+      <td style="font-size:12px;color:var(--muted)">${d.Deskripsi || '-'}</td>
+      <td style="text-align:center">
+        <button class="btn btn-red btn-sm" onclick="hapusGolongan('${d.Kode}')">Hapus</button>
+      </td>
+    </tr>`
+  ).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Belum ada data.</td></tr>';
+}
+
+async function simpanAsalUsul() {
+  const kode = document.getElementById('auKode').value.trim().toUpperCase();
+  const nama = document.getElementById('auNama').value.trim();
+  if (!kode || !nama) return alert('Kode dan nama wajib diisi.');
+  const r = await api({ action: 'TAMBAH_ASAL_USUL', kode, nama });
+  if (r.status === 'SUKSES') {
+    document.getElementById('auKode').value = '';
+    document.getElementById('auNama').value = '';
+    tutupOverlay('ovTambahAsalUsul');
+    loadReferensi();
+  } else {
+    alert(r.pesan);
+  }
+}
+
+async function hapusAsalUsul(kode) {
+  if (!confirm('Hapus sumber dana "' + kode + '"? Kode ini tidak akan muncul lagi di form tambah barang.')) return;
+  const r = await api({ action: 'DELETE_ASAL_USUL', kode });
+  if (r.status === 'SUKSES') loadReferensi();
+  else alert(r.pesan);
+}
+
+async function simpanGolongan() {
+  const kode = document.getElementById('golKode').value.trim().toUpperCase();
+  const nama = document.getElementById('golNama').value.trim();
+  const deskripsi = document.getElementById('golDeskripsi').value.trim();
+  if (!kode || !nama) return alert('Kode dan nama wajib diisi.');
+  const r = await api({ action: 'TAMBAH_GOLONGAN', kode, nama, deskripsi });
+  if (r.status === 'SUKSES') {
+    document.getElementById('golKode').value = '';
+    document.getElementById('golNama').value = '';
+    document.getElementById('golDeskripsi').value = '';
+    tutupOverlay('ovTambahGolongan');
+    loadReferensi();
+  } else {
+    alert(r.pesan);
+  }
+}
+
+async function hapusGolongan(kode) {
+  if (!confirm('Hapus golongan "' + kode + '"?')) return;
+  const r = await api({ action: 'DELETE_GOLONGAN', kode });
+  if (r.status === 'SUKSES') loadReferensi();
+  else alert(r.pesan);
 }
 
 async function hapusBarang(kode) {
@@ -1613,5 +1852,56 @@ loadSection('sec-home', 'Dashboard');
 isiDropdownUnit('pUnitPeminjam');
 isiDropdownUnit('userUnit');
 </script>
+
+<!-- ── MODAL: TAMBAH SUMBER DANA ── -->
+<div class="overlay" id="ovTambahAsalUsul"><div class="modal" style="max-width:420px">
+  <div class="modal-head" style="background:#0f172a">
+    <h3>Tambah Sumber Dana</h3>
+    <button class="modal-close-btn" onclick="tutupOverlay('ovTambahAsalUsul')">✕</button>
+  </div>
+  <div class="modal-body-form">
+    <div class="form-group">
+      <label>Kode <span style="color:var(--red)">*</span></label>
+      <input type="text" id="auKode" placeholder="Contoh: BOSREG, KOM, HIBAH..." style="text-transform:uppercase">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Kode dipakai dalam nomor registrasi. Singkat, tanpa spasi.</div>
+    </div>
+    <div class="form-group">
+      <label>Nama Lengkap <span style="color:var(--red)">*</span></label>
+      <input type="text" id="auNama" placeholder="Contoh: BOS Reguler, Dana Komite...">
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="tutupOverlay('ovTambahAsalUsul')">Batal</button>
+    <button class="btn btn-blue" onclick="simpanAsalUsul()">Simpan</button>
+  </div>
+</div></div>
+
+<!-- ── MODAL: TAMBAH GOLONGAN BARANG ── -->
+<div class="overlay" id="ovTambahGolongan"><div class="modal" style="max-width:420px">
+  <div class="modal-head" style="background:#0f172a">
+    <h3>Tambah Golongan Barang</h3>
+    <button class="modal-close-btn" onclick="tutupOverlay('ovTambahGolongan')">✕</button>
+  </div>
+  <div class="modal-body-form">
+    <div class="form-group">
+      <label>Kode <span style="color:var(--red)">*</span></label>
+      <input type="text" id="golKode" placeholder="Contoh: TIK, MEB, ELE..." style="text-transform:uppercase">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Kode singkat, tanpa spasi, akan muncul di nomor registrasi.</div>
+    </div>
+    <div class="form-group">
+      <label>Nama Golongan <span style="color:var(--red)">*</span></label>
+      <input type="text" id="golNama" placeholder="Contoh: Teknologi Informasi & Komunikasi">
+    </div>
+    <div class="form-group">
+      <label>Deskripsi (opsional)</label>
+      <textarea id="golDeskripsi" placeholder="Contoh: Laptop, proyektor, printer, jaringan..."></textarea>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="tutupOverlay('ovTambahGolongan')">Batal</button>
+    <button class="btn btn-blue" onclick="simpanGolongan()">Simpan</button>
+  </div>
+</div></div>
+
 </body>
 </html>
