@@ -231,13 +231,14 @@
       const result = await res.json();
 
       if (result.status === 'SUKSES') {
-        localStorage.setItem('inv_logged_in', 'true');
-        localStorage.setItem('inv_username', result.username);
-        localStorage.setItem('inv_nama', result.nama);
-        localStorage.setItem('inv_role', result.role);
-        localStorage.setItem('inv_unit', result.unit);
+        sessionStorage.setItem('inv_token',    result.token);
+        sessionStorage.setItem('inv_username', result.username);
+        sessionStorage.setItem('inv_nama',     result.nama);
+        sessionStorage.setItem('inv_role',     result.role);
+        sessionStorage.setItem('inv_unit',     result.unit);
         window.location.href = 'dashboard.html';
-      } else {
+      }
+      else {
         showAlert(result.pesan || 'Login gagal.');
         btn.textContent = 'Masuk ke Dashboard';
         btn.disabled = false;
