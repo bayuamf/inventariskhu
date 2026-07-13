@@ -750,16 +750,37 @@ tbody tr:hover { background: #f8fafc; }
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyrBEKLPrTOCHjt4WHTWIvERAn4s-Oy9jBNR8QLITJz-S0ubRnqng7U3ArQokxbdYGQQQ/exec';
 
 // ── SESSION ──
-if (localStorage.getItem('inv_logged_in') !== 'true') {
-  alert('Akses ditolak. Silakan login terlebih dahulu.');
+const _token = sessionStorage.getItem('inv_token');
+if (!_token) {
   window.location.href = 'login.html';
 }
 const USER = {
-  username: localStorage.getItem('inv_username'),
-  nama:     localStorage.getItem('inv_nama'),
-  role:     localStorage.getItem('inv_role'),
-  unit:     localStorage.getItem('inv_unit'),
+  token:    sessionStorage.getItem('inv_token'),
+  username: sessionStorage.getItem('inv_username'),
+  nama:     sessionStorage.getItem('inv_nama'),
+  role:     sessionStorage.getItem('inv_role'),
+  unit:     sessionStorage.getItem('inv_unit'),
 };
+
+// Validasi token ke server sebelum apapun ditampilkan
+(async function() {
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'VALIDASI_TOKEN', token: USER.token })
+    });
+    const result = await res.json();
+    if (result.status !== 'SUKSES') {
+      sessionStorage.clear();
+      alert('Sesi tidak valid atau sudah kedaluwarsa. Silakan login kembali.');
+      window.location.href = 'login.html';
+    }
+  } catch {
+    alert('Tidak bisa memverifikasi sesi. Periksa koneksi internet.');
+    window.location.href = 'login.html';
+  }
+})();
 const isAdmin = USER.role === 'MainAdmin';
 
 // ── INIT UI ──
@@ -1843,8 +1864,17 @@ async function selesaiMusnah(id) {
 }
 
 // ── LOGOUT ──
-function doLogout() {
-  if (confirm('Yakin ingin keluar?')) { localStorage.clear(); window.location.href = 'login.html'; }
+async function doLogout() {
+  if (!confirm('Yakin ingin keluar?')) return;
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'LOGOUT', token: USER.token })
+    });
+  } catch { /* tetap logout meski gagal panggil server */ }
+  sessionStorage.clear();
+  window.location.href = 'login.html';
 }
 
 // ── INIT ──
